@@ -5,6 +5,8 @@ const menu = document.querySelector('#menu');
 const back = document.querySelector('#back');
 const main = document.querySelector('#main');
 const status = document.querySelector('#status');
+const documents = createStudentDocuments(request);
+const panel = document.querySelector('.panel');
 let nodes = [];
 let loaded = false;
 let syncing = false;
@@ -14,7 +16,7 @@ let fingerprint = '';
 history.replaceState({ menuDepth: 0 }, '');
 function currentMenu() {
   const id = location.hash.slice(1);
-  return nodes.find(node => node.id === id && node.kind === 'menu') || null;
+  return nodes.find(node => node.id === id && (node.kind === 'menu' || node.kind === 'document')) || null;
 }
 function navigate(hash) {
   if (location.hash === hash) return;
@@ -27,18 +29,27 @@ function render() {
   const parent = currentMenu();
   main.disabled = !location.hash;
   back.disabled = !(history.state?.menuDepth > 0);
+  const isDocument = parent?.kind === 'document';
+  panel.classList.toggle('document-open', isDocument);
+  menu.hidden = isDocument;
+  if (isDocument) {
+    const student = nodes.find(node => node.id === parent.parent_id);
+    documents.open(parent, student?.label || 'Student');
+    return;
+  }
+  documents.close();
   menu.setAttribute('aria-label', parent?.label || 'Main menu');
   const focusedId = menu.contains(document.activeElement) ? document.activeElement.dataset.nodeId : null;
   menu.replaceChildren();
   if (!loaded) return;
   const entries = nodes.filter(node => node.parent_id === (parent?.id || null));
   for (const entry of entries) {
-    const isLink = entry.kind === 'menu' || Boolean(entry.url);
+    const isLink = entry.kind === 'menu' || entry.kind === 'document' || Boolean(entry.url);
     const item = document.createElement(isLink ? 'a' : 'button');
     item.className = 'item';
     item.dataset.nodeId = entry.id;
     item.textContent = entry.label;
-    if (entry.kind === 'menu') {
+    if (entry.kind === 'menu' || entry.kind === 'document') {
       item.href = '#' + entry.id;
       item.addEventListener('click', event => {
         if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -56,17 +67,25 @@ function render() {
   }
   if (!entries.length) status.textContent = 'This menu is empty.';
 }
-async function syncMenus() {
-  if (syncing) return;
-  syncing = true;
+async function request(path, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/' + TABLE + '?select=id,parent_id,label,kind,url,sort_order&order=sort_order.asc,id.asc', {
-      headers: { apikey: SUPABASE_KEY }, cache: 'no-store', signal: controller.signal
+    const response = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      ...options,
+      headers: { apikey: SUPABASE_KEY, ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+      cache: 'no-store', signal: controller.signal
     });
-    if (!response.ok) throw new Error('Menu request failed: ' + response.status);
-    const data = await response.json();
+    if (!response.ok) throw new Error('Request failed: ' + response.status);
+    return await response.json();
+  } finally { clearTimeout(timeout); }
+}
+async function syncAll() { await Promise.allSettled([syncMenus(), documents.sync()]); }
+async function syncMenus() {
+  if (syncing) return;
+  syncing = true;
+  try {
+    const data = await request(TABLE + '?select=id,parent_id,label,kind,url,sort_order&order=sort_order.asc,id.asc');
     if (!Array.isArray(data)) throw new Error('Invalid menu response');
     const nextFingerprint = JSON.stringify(data);
     const hadSyncError = status.dataset.syncError === 'true';
@@ -84,7 +103,6 @@ async function syncMenus() {
     status.dataset.syncError = 'true';
     status.textContent = loaded ? 'Unable to sync. Showing the last loaded menu; retrying shortly.' : 'Unable to load menus. Check your connection; retrying shortly.';
   } finally {
-    clearTimeout(timeout);
     syncing = false;
   }
 }
@@ -92,10 +110,10 @@ main.addEventListener('click', () => navigate(''));
 back.addEventListener('click', () => { if (history.state?.menuDepth > 0) history.back(); });
 window.addEventListener('popstate', () => { status.textContent = ''; render(); menu.querySelector('.item')?.focus(); });
 window.addEventListener('hashchange', render);
-window.addEventListener('focus', syncMenus);
-window.addEventListener('online', syncMenus);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) syncMenus(); });
-setInterval(() => { if (!document.hidden) syncMenus(); }, 5000);
+window.addEventListener('focus', syncAll);
+window.addEventListener('online', syncAll);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncAll(); });
+setInterval(() => { if (!document.hidden) syncAll(); }, 5000);
 status.textContent = 'Loading menus…';
 render();
 syncMenus();

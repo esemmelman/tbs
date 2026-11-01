@@ -1,0 +1,11 @@
+{
+  "name": "tbs",
+  "private": true,
+  "scripts": {
+    "test": "node --test app.test.cjs",
+    "check": "node --check app.js && node --check documents.js"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3"
+  }
+}

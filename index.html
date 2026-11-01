@@ -5,17 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <title>My Links</title>
-  <link rel="stylesheet" href="style.css?v=8">
-  <script src="app.js?v=8" defer></script>
+  <link rel="stylesheet" href="style.css?v=9">
+  <script src="documents.js?v=9" defer></script>
+  <script src="app.js?v=9" defer></script>
 </head>
 <body>
-  <span class="revision" aria-label="Revision 8">Rev 8</span>
+  <span class="revision" aria-label="Revision 9">Rev 9</span>
   <main class="panel" aria-label="My links">
     <div class="controls" aria-label="Menu navigation">
       <button id="main" type="button">Main</button>
       <button id="back" type="button">Back</button>
     </div>
     <nav id="menu" aria-label="Categories"></nav>
+    <section id="document-screen" hidden aria-labelledby="document-title">
+      <h1 id="document-title"></h1>
+      <fieldset id="document-toolbar" disabled aria-label="Text formatting">
+        <button type="button" data-command="bold" aria-label="Bold"><b>B</b></button>
+        <button type="button" data-command="italic" aria-label="Italic"><i>I</i></button>
+        <button type="button" data-command="underline" aria-label="Underline"><u>U</u></button>
+        <button type="button" data-command="insertUnorderedList">Bullets</button>
+        <button type="button" id="insert-date">Insert date/time</button>
+        <button type="button" id="save-document">Save</button>
+      </fieldset>
+      <div id="document-editor" contenteditable="false" role="textbox" aria-multiline="true" aria-label="Student document" spellcheck="true"></div>
+      <p id="document-status" class="status" role="status" aria-live="polite"></p>
+      <div id="document-conflict" hidden>
+        <button type="button" id="keep-document">Save my version</button>
+        <button type="button" id="reload-document">Use saved version</button>
+      </div>
+    </section>
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </main>
 </body>
