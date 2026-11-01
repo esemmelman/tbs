@@ -10,10 +10,20 @@ const categories = {
 };
 const menu = document.querySelector('#menu');
 const back = document.querySelector('#back');
+const main = document.querySelector('#main');
+// Track in-app history so Back never sends a new visitor off the site.
+history.replaceState({ menuDepth: 0 }, '');
+function navigate(hash) {
+  if (location.hash === hash) return;
+  history.pushState({ menuDepth: (history.state?.menuDepth || 0) + 1 }, '', hash || location.pathname + location.search);
+  render();
+  menu.querySelector('a').focus();
+}
 function render() {
   const key = location.hash.slice(1);
   const category = Object.hasOwn(categories, key) ? categories[key] : null;
-  back.hidden = !category;
+  main.disabled = !category;
+  back.disabled = !(history.state?.menuDepth > 0);
   menu.setAttribute('aria-label', category?.title || 'Categories');
   menu.replaceChildren();
   const entries = category ? category.links : Object.entries(categories).map(([key, value]) => ({ name: value.title, url: '#' + key, icon: value.icon }));
@@ -21,6 +31,13 @@ function render() {
     const link = document.createElement('a');
     link.className = 'item';
     link.href = entry.url;
+    if (!category) {
+      link.addEventListener('click', event => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigate(entry.url);
+      });
+    }
     const icon = document.createElement('span');
     icon.className = 'icon';
     icon.setAttribute('aria-hidden', 'true');
@@ -28,20 +45,12 @@ function render() {
     const label = document.createElement('span');
     label.className = 'label';
     label.textContent = entry.name;
-    if (category) {
-      const url = document.createElement('span');
-      url.className = 'url';
-      url.textContent = entry.url;
-      label.append(url);
-    }
-    const arrow = document.createElement('span');
-    arrow.className = 'arrow';
-    arrow.textContent = category ? '↗' : '→';
-    arrow.setAttribute('aria-hidden', 'true');
-    link.append(icon, label, arrow);
+    link.append(icon, label);
     menu.append(link);
   }
 }
-back.addEventListener('click', () => { location.hash = ''; });
-window.addEventListener('hashchange', () => { render(); document.querySelector('#menu a').focus(); });
+main.addEventListener('click', () => navigate(''));
+back.addEventListener('click', () => { if (history.state?.menuDepth > 0) history.back(); });
+window.addEventListener('popstate', () => { render(); menu.querySelector('a').focus(); });
+window.addEventListener('hashchange', render);
 render();
