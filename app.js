@@ -19,11 +19,12 @@ function currentMenu() {
   return nodes.find(node => node.id === id && (node.kind === 'menu' || node.kind === 'document')) || null;
 }
 function navigate(hash) {
-  if (location.hash === hash) return;
+  if (location.hash === hash) { render(); return; }
   history.pushState({ menuDepth: (history.state?.menuDepth || 0) + 1 }, '', hash || location.pathname + location.search);
   status.textContent = '';
   render();
-  menu.querySelector('.item')?.focus();
+  if (currentMenu()?.kind === 'document') document.querySelector('#document-title').focus();
+  else menu.querySelector('.item')?.focus();
 }
 function render() {
   const parent = currentMenu();
@@ -44,12 +45,15 @@ function render() {
   if (!loaded) return;
   const entries = nodes.filter(node => node.parent_id === (parent?.id || null));
   for (const entry of entries) {
-    const isLink = entry.kind === 'menu' || entry.kind === 'document' || Boolean(entry.url);
+    const isLink = entry.kind === 'menu' || Boolean(entry.url);
     const item = document.createElement(isLink ? 'a' : 'button');
     item.className = 'item';
     item.dataset.nodeId = entry.id;
     item.textContent = entry.label;
-    if (entry.kind === 'menu' || entry.kind === 'document') {
+    if (entry.kind === 'document') {
+      item.type = 'button';
+      item.addEventListener('click', () => navigate('#' + entry.id));
+    } else if (entry.kind === 'menu') {
       item.href = '#' + entry.id;
       item.addEventListener('click', event => {
         if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;

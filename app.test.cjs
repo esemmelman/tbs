@@ -60,7 +60,8 @@ test('Contacts is first, student menus contain Doc, and Main/Back work', async t
   assert.deepEqual(c.labels(), ['Emelia Esterkin', 'Sasha Esterkin']);
   c.get('#menu a').click();
   assert.deepEqual(c.labels(), ['Doc']);
-  c.get('#menu a').click();
+  assert.equal(c.get('#menu .item').tagName, 'BUTTON');
+  c.get('#menu .item').click();
   await settle();
   assert.equal(c.get('#document-screen').hidden, false);
   assert.equal(c.get('#document-title').textContent, 'Emelia Esterkin — Doc');
