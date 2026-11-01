@@ -1,9 +1,9 @@
 const categories = {
-  websites: { title: 'Websites', icon: '◎', description: 'Stay connected to the latest news.', links: [
+  websites: { title: 'Websites', description: 'Stay connected to the latest news.', links: [
     { name: 'CNN', url: 'https://www.cnn.com/' },
     { name: 'C-span', url: 'https://www.c-span.org/' }
   ] },
-  calendars: { title: 'Calendars', icon: '▦', description: 'Make room for what’s coming next.', links: [
+  calendars: { title: 'Calendars', description: 'Make room for what’s coming next.', links: [
     { name: 'Temple Beth David', url: 'https://www.templebethdavid.org/community/calendar/' },
     { name: 'Google Calendar', url: 'https://calendar.google.com/calendar/u/0/r/month?pli=1' }
   ] }
@@ -26,7 +26,7 @@ function render() {
   back.disabled = !(history.state?.menuDepth > 0);
   menu.setAttribute('aria-label', category?.title || 'Categories');
   menu.replaceChildren();
-  const entries = category ? category.links : Object.entries(categories).map(([key, value]) => ({ name: value.title, url: '#' + key, icon: value.icon }));
+  const entries = category ? category.links : Object.entries(categories).map(([key, value]) => ({ name: value.title, url: '#' + key }));
   for (const entry of entries) {
     const link = document.createElement('a');
     link.className = 'item';
@@ -38,14 +38,10 @@ function render() {
         navigate(entry.url);
       });
     }
-    const icon = document.createElement('span');
-    icon.className = 'icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = entry.icon || category.icon;
     const label = document.createElement('span');
     label.className = 'label';
     label.textContent = entry.name;
-    link.append(icon, label);
+    link.append(label);
     menu.append(link);
   }
 }
