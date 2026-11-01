@@ -13,10 +13,6 @@ const back = document.querySelector('#back');
 function render() {
   const key = location.hash.slice(1);
   const category = Object.hasOwn(categories, key) ? categories[key] : null;
-  document.querySelector('#menu-title').textContent = category?.title || 'Where to?';
-  document.querySelector('#description').textContent = category?.description || 'Choose a category to find your next stop.';
-  document.querySelector('#eyebrow').textContent = category ? 'PICK YOUR DESTINATION' : 'A LITTLE SHORTCUT';
-  document.querySelector('#footer').textContent = category ? 'Choose a link to open the website.' : 'Your everyday destinations, in one place.';
   back.hidden = !category;
   menu.setAttribute('aria-label', category?.title || 'Categories');
   menu.replaceChildren();
@@ -47,5 +43,5 @@ function render() {
   }
 }
 back.addEventListener('click', () => { location.hash = ''; });
-window.addEventListener('hashchange', () => { render(); document.querySelector('#menu-title').focus(); });
+window.addEventListener('hashchange', () => { render(); document.querySelector('#menu a').focus(); });
 render();
