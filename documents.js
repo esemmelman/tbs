@@ -155,7 +155,9 @@ function createStudentDocuments(request) {
     if (button.dataset.command) button.addEventListener('click', () => command(button.dataset.command));
   }
   document.querySelector('#insert-date').addEventListener('click', () => {
-    command('insertText', new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()) + ' ');
+    const timestamp = document.createElement('strong');
+    timestamp.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+    command('insertHTML', timestamp.outerHTML + '&nbsp;');
   });
   document.querySelector('#save-document').addEventListener('click', () => { capture(); void save(); });
   document.querySelector('#keep-document').addEventListener('click', async () => {

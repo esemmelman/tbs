@@ -8,7 +8,7 @@ Each menu row has an `id`, `parent_id` (null for the starting screen), `label`, 
 
 Student documents are stored in the dedicated `public.tbs_student_documents_v1` table, keyed by the student's Doc menu node. `database/student-documents.sql` records the Contacts/menu changes and document setup after the initial schema. Documents are publicly readable and editable without sign-in, as requested. No other app tables are changed.
 
-The editor supports bold, italic, underline, bullets, and a button to insert the current date and time at the cursor using the device's locale and timezone. Rich text is sanitized to basic formatting before storage and display. Changes autosave after 700 ms; Save also saves immediately. Pending drafts are backed up in browser storage when available. A revision filter prevents stale writes: conflicting edits require an explicit choice between Save my version and Use saved version.
+The editor supports bold, italic, underline, bullets, and a button to insert the current date and time in bold at the cursor using the device's locale and timezone. Rich text is sanitized to basic formatting before storage and display. Changes autosave after 700 ms; Save also saves immediately. Pending drafts are backed up in browser storage when available. A revision filter prevents stale writes: conflicting edits require an explicit choice between Save my version and Use saved version.
 
 Every device loads shared menus and documents from Supabase. Visible pages poll every five seconds and refresh on focus, reconnect, or becoming visible. Clean documents refresh when the editor is not focused, preserving the cursor during editing. Network errors display a message and retry. There is no automatic client-side reseeding.
 

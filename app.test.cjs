@@ -37,6 +37,7 @@ async function client(t, db) {
   };
   w.document.execCommand = (command, _, value) => {
     if (command === 'insertText') w.document.querySelector('#document-editor').append(w.document.createTextNode(value));
+    if (command === 'insertHTML') w.document.querySelector('#document-editor').insertAdjacentHTML('beforeend', value);
     return true;
   };
   w.eval(fs.readFileSync('documents.js', 'utf8'));
@@ -81,7 +82,9 @@ test('rich text saves per student and syncs to another client; date insertion sa
   await b.open('emelia-esterkin');
   assert.equal(b.get('#document-editor').innerHTML, db.documents.get('emelia-esterkin-doc').content_html);
   a.get('#insert-date').click();
+  assert.match(a.get('#document-editor strong').textContent, new RegExp(String(new Date().getFullYear())));
   await a.save();
+  assert.match(db.documents.get('emelia-esterkin-doc').content_html, /<strong>[^<]+<\/strong>/);
   assert.match(db.documents.get('emelia-esterkin-doc').content_html, new RegExp(String(new Date().getFullYear())));
   await a.open('sasha-esterkin');
   assert.equal(a.get('#document-editor').innerHTML, '');
