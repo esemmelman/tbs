@@ -1,3 +1,44 @@
+/* Keep one blank line, plus a final empty line where the user can type. */
+function normalizeDocumentSpacing(root) {
+  const blocks = new Set(['P', 'DIV', 'LI', 'BLOCKQUOTE', 'H2', 'H3']);
+  let lastLeaf = null;
+  function findLast(node) {
+    if (node.nodeType === 3) { if (node.textContent.trim()) lastLeaf = node; }
+    else if (node.nodeType === 1) {
+      if (node.tagName === 'BR' || (blocks.has(node.tagName) && !node.childNodes.length)) lastLeaf = node;
+      for (const child of node.childNodes) findLast(child);
+    }
+  }
+  for (const child of root.childNodes) findLast(child);
+  let hasText = false;
+  let blanks = 0;
+  function walk(parent) {
+    for (const node of [...parent.childNodes]) {
+      if (node.nodeType === 3) {
+        if (node.textContent.trim()) { hasText = true; blanks = 0; }
+        continue;
+      }
+      if (node.nodeType !== 1) continue;
+      const block = blocks.has(node.tagName);
+      if (block && hasText) { hasText = false; blanks = 0; }
+      if (block && !node.textContent.trim() && !node.querySelector('img,video,hr')) {
+        const trailing = node === lastLeaf || node.contains(lastLeaf);
+        if (blanks >= (trailing ? 2 : 1)) node.remove();
+        else { node.replaceChildren(document.createElement('br')); blanks++; }
+        continue;
+      }
+      if (node.tagName === 'BR') {
+        if (node === lastLeaf) continue; // Browser's final caret placeholder.
+        if (hasText) { hasText = false; blanks = 0; }
+        else if (blanks >= 1) node.remove();
+        else blanks++;
+      } else walk(node);
+      if (block && hasText) { hasText = false; blanks = 0; }
+    }
+  }
+  walk(root);
+}
+
 /* A small shared rich text editor. Only basic formatting is stored/rendered. */
 function cleanDocumentHTML(html) {
   const source = document.createElement('template');
@@ -15,6 +56,7 @@ function cleanDocumentHTML(html) {
     }
   }
   for (const node of source.content.childNodes) copy(node, output);
+  normalizeDocumentSpacing(output);
   return output.innerHTML;
 }
 
@@ -45,6 +87,7 @@ function createStudentDocuments(request) {
   }
   function capture() {
     if (!active?.loaded) return;
+    normalizeDocumentSpacing(editor);
     const html = cleanDocumentHTML(editor.innerHTML);
     if (html === active.html) return;
     active.html = html;
@@ -155,11 +198,24 @@ function createStudentDocuments(request) {
     if (button.dataset.command) button.addEventListener('click', () => command(button.dataset.command));
   }
   document.querySelector('#insert-date').addEventListener('click', () => {
+    if (!active?.loaded) return;
     const timestamp = document.createElement('strong');
     timestamp.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
-    command('insertHTML', timestamp.outerHTML + '&nbsp;');
+    restoreSelection();
+    document.execCommand('insertHTML', false, timestamp.outerHTML + '<br><br><span data-timestamp-cursor></span><br>');
+    const marker = editor.querySelector('[data-timestamp-cursor]');
+    if (marker) {
+      const range = document.createRange();
+      range.setStartBefore(marker);
+      range.collapse(true);
+      marker.remove();
+      const current = window.getSelection();
+      current.removeAllRanges();
+      current.addRange(range);
+    }
+    rememberSelection();
+    capture();
   });
-  document.querySelector('#save-document').addEventListener('click', () => { capture(); void save(); });
   document.querySelector('#keep-document').addEventListener('click', async () => {
     const session = active;
     try {

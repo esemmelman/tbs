@@ -49,7 +49,7 @@ async function client(t, db) {
     labels: () => [...w.document.querySelectorAll('#menu .item')].map(item => item.textContent),
     async open(student) { w.navigate('#' + student + '-doc'); await settle(); },
     edit(html) { const el = w.document.querySelector('#document-editor'); el.innerHTML = html; el.dispatchEvent(new w.Event('input')); },
-    async save() { w.document.querySelector('#save-document').click(); await settle(); }
+    async save() { await w.syncAll(); await settle(); }
   };
 }
 
@@ -83,6 +83,12 @@ test('rich text saves per student and syncs to another client; date insertion sa
   assert.equal(b.get('#document-editor').innerHTML, db.documents.get('emelia-esterkin-doc').content_html);
   a.get('#insert-date').click();
   assert.match(a.get('#document-editor strong').textContent, new RegExp(String(new Date().getFullYear())));
+  assert.equal(a.get('#save-document'), null);
+  const cursor = a.w.getSelection().getRangeAt(0);
+  assert.equal(cursor.startContainer, a.get('#document-editor'));
+  assert.equal(cursor.startContainer.childNodes[cursor.startOffset].tagName, 'BR');
+  assert.equal(cursor.startContainer.childNodes[cursor.startOffset - 1].tagName, 'BR');
+  assert.equal(cursor.startContainer.childNodes[cursor.startOffset - 2].tagName, 'BR');
   await a.save();
   assert.match(db.documents.get('emelia-esterkin-doc').content_html, /<strong>[^<]+<\/strong>/);
   assert.match(db.documents.get('emelia-esterkin-doc').content_html, new RegExp(String(new Date().getFullYear())));
@@ -94,6 +100,18 @@ test('rich text saves per student and syncs to another client; date insertion sa
   assert.match(db.documents.get('emelia-esterkin-doc').content_html, /Lesson notes/);
   await b.w.syncAll();
   assert.match(b.get('#document-editor').textContent, new RegExp(String(new Date().getFullYear())));
+});
+
+test('spacing normalization limits mixed paragraph and soft-break gaps without losing formatting', async t => {
+  const c = await client(t, database());
+  assert.equal(c.w.cleanDocumentHTML('<p><b>A</b></p><p><br></p><div><br></div><p><br></p><p><i>B</i></p>'), '<p><b>A</b></p><p><br></p><p><i>B</i></p>');
+  assert.equal(c.w.cleanDocumentHTML('<p>A<br><br><br><br>B</p>'), '<p>A<br><br>B</p>');
+  assert.equal(c.w.cleanDocumentHTML('<p>A<br><span><br><br></span><br>B</p>'), '<p>A<br><span><br></span>B</p>');
+  assert.equal(c.w.cleanDocumentHTML('<div>A</div><div><br></div><div><br></div><div><br></div>'), '<div>A</div><div><br></div><div><br></div>');
+  await c.open('emelia-esterkin');
+  c.edit('<p>A</p><div><br></div><div><br></div><p>B</p>');
+  assert.equal(c.get('#document-editor').innerHTML, '<p>A</p><div><br></div><p>B</p>');
+  await c.save();
 });
 
 test('concurrent edits preserve the draft and require explicit conflict resolution', async t => {
