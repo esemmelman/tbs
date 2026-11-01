@@ -1,6 +1,6 @@
 # My Links
 
-A centered shared menu. Contacts opens the supplied Google spreadsheet and appears above Zoom. Zoom opens Emelia Esterkin and Sasha Esterkin. Each student's screen contains Doc, which opens a separate rich text document. Use Main to return to the starting menu or Back to return to the previous screen.
+A centered shared menu. Contacts opens the supplied Google spreadsheet and appears above Zoom. Zoom opens Emelia Esterkin, Sasha Esterkin, and Talia Gladstein. Each student's screen contains Doc, which opens a separate rich text document. Use Main to return to the starting menu or Back to return to the previous screen.
 
 Menus are stored exclusively in `public.tbs_menu_nodes_v1` in the existing bnaimitzvah Supabase project (`fgomaujsdblpzxhnnqrg`). This dedicated table was checked against existing tables before creation. No other app tables are changed. `database/schema.sql` records the initial setup; do not rerun it on the existing table.
 
