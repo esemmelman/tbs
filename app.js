@@ -65,7 +65,7 @@ function render() {
   const parent = currentMenu();
   panel.classList.toggle('tasks-open', isTasksScreen(parent));
   main.disabled = !location.hash;
-  back.disabled = !(history.state?.menuDepth > 0);
+  back.disabled = !(history.state?.menuDepth > 0) && !parent;
   const documentNode = screenDocument(parent);
   const isDocument = Boolean(documentNode);
   panel.classList.toggle('document-open', isDocument);
@@ -185,7 +185,20 @@ async function syncMenus() {
   }
 }
 main.addEventListener('click', () => navigate(''));
-back.addEventListener('click', () => { if (history.state?.menuDepth > 0) history.back(); });
+back.addEventListener('click', () => {
+  if (history.state?.menuDepth > 0) { history.back(); return; }
+  const current = currentMenu();
+  let parent = nodes.find(node => node.id === current?.parent_id);
+  // Skip the student container, which already shows this document.
+  if (current?.kind === 'document' && screenDocument(parent)?.id === current.id) {
+    parent = nodes.find(node => node.id === parent?.parent_id);
+  }
+  if (!current) return;
+  history.replaceState({ menuDepth: 0 }, '', parent ? '#' + parent.id : location.pathname + location.search);
+  status.textContent = '';
+  render();
+  menu.querySelector('.item')?.focus();
+});
 window.addEventListener('popstate', () => { status.textContent = ''; render(); menu.querySelector('.item')?.focus(); });
 window.addEventListener('hashchange', render);
 window.addEventListener('focus', syncAll);

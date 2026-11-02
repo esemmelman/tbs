@@ -15,8 +15,8 @@ const settle = async () => { for (let n = 0; n < 5; n++) await new Promise(resol
 function database() {
   return { nodes: structuredClone(seed), documents: new Map(['emelia-esterkin-doc', 'sasha-esterkin-doc'].map(node_id => [node_id, { node_id, content_html: '', revision: 0 }])) };
 }
-async function client(t, db) {
-  const dom = new JSDOM(fs.readFileSync('index.html', 'utf8'), { url: 'https://example.com/tbs/', runScripts: 'outside-only', pretendToBeVisual: true });
+async function client(t, db, hash = '') {
+  const dom = new JSDOM(fs.readFileSync('index.html', 'utf8'), { url: 'https://example.com/tbs/' + hash, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   t.after(() => w.close());
   w.fetch = async (url, options = {}) => {
@@ -313,4 +313,19 @@ test('opening rich text places the caret inside once, including reopening a load
   assert.equal(c.w.document.activeElement, c.get('#document-editor'));
   range = c.w.getSelection().getRangeAt(0);
   assert.equal(range.startOffset, c.get('#document-editor').childNodes.length);
+});
+
+
+test('Back returns direct student and document links to their parent list', async t => {
+  for (const hash of ['#emelia-esterkin', '#emelia-esterkin-doc']) {
+    const c = await client(t, database(), hash);
+    assert.equal(c.get('#document-screen').hidden, false);
+    assert.equal(c.get('#back').disabled, false);
+    c.get('#back').click();
+    assert.equal(c.w.location.hash, '#zoom');
+    assert.deepEqual(c.labels(), ['Emelia Esterkin', 'Sasha Esterkin']);
+    c.get('#back').click();
+    assert.equal(c.w.location.hash, '');
+    assert.equal(c.get('#back').disabled, true);
+  }
 });
