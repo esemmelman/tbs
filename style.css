@@ -51,6 +51,7 @@ dialog button:disabled { opacity: .45; cursor: default; }
 .tasks-open .task-row input { margin-top: 7px; }
 .tasks-open .task-name { width: 100%; text-align: left; }
 @media (max-width: 768px), (pointer: coarse) {
+  .tasks-open #menu { position: relative; left: 8px; max-width: calc(100% - 8px); }
   .tasks-open .task-row + .task-row { margin-top: 24px; }
   .panel:not(.tasks-open) #menu { row-gap: 14px; }
 }
