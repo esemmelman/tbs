@@ -244,3 +244,30 @@ test('Tasks supports numbered names, completion, rich text, rename, and delete a
   a.get('#modify-item').dispatchEvent(new a.w.Event('change')); a.get('#modify-delete').click(); await settle();
   assert.deepEqual(a.labels(), ['1. Write report']);
 });
+
+test('outstanding tasks roll up through every ancestor and update after completion and deletion', async t => {
+  const db = database();
+  db.nodes.push(
+    { id: 'temple', parent_id: null, label: 'Temple Beth David', kind: 'menu' },
+    { id: 'brotherhood', parent_id: 'temple', label: 'Brotherhood', kind: 'menu' },
+    { id: 'carnival', parent_id: 'brotherhood', label: 'Chanukah Carnival', kind: 'menu' },
+    { id: 'tasks', parent_id: 'carnival', label: 'Tasks', kind: 'menu' },
+    { id: 'other-tasks', parent_id: 'brotherhood', label: 'Tasks', kind: 'menu' },
+    { id: 'task-a', parent_id: 'tasks', label: 'Arrange food', kind: 'task', completed: false },
+    { id: 'task-b', parent_id: 'tasks', label: 'Book room', kind: 'task', completed: true },
+    { id: 'task-c', parent_id: 'other-tasks', label: 'Call members', kind: 'task', completed: false }
+  );
+  const a = await client(t, db), b = await client(t, db);
+  assert.ok(a.labels().includes('Temple Beth David (2)'));
+  a.w.navigate('#temple'); assert.deepEqual(a.labels(), ['Brotherhood (2)']);
+  a.w.navigate('#brotherhood'); assert.deepEqual(a.labels(), ['Chanukah Carnival (1)', 'Tasks (1)']);
+  a.w.navigate('#carnival'); assert.deepEqual(a.labels(), ['Tasks (1)']);
+  a.w.navigate('#tasks'); assert.deepEqual(a.labels(), ['1. Arrange food', '2. Book room']);
+  const checkbox = a.get('.task-row input');
+  checkbox.checked = true; checkbox.dispatchEvent(new a.w.Event('change')); await settle();
+  a.w.navigate('#carnival'); assert.deepEqual(a.labels(), ['Tasks (0)']);
+  a.w.navigate('#brotherhood'); assert.deepEqual(a.labels(), ['Chanukah Carnival (0)', 'Tasks (1)']);
+  await b.w.syncAll(); assert.ok(b.labels().includes('Temple Beth David (1)'));
+  db.nodes = db.nodes.filter(n => n.id !== 'task-c');
+  await b.w.syncAll(); assert.ok(b.labels().includes('Temple Beth David (0)'));
+});

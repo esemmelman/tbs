@@ -39,5 +39,5 @@ dialog button { cursor: pointer; }
 dialog button:disabled { opacity: .45; cursor: default; }
 .task-row { display: flex; align-items: center; gap: 10px; text-align: left; }
 .task-row input { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
-.task-name { text-align: left; }
+.task-name { text-align: left; font-size: 18px; font-weight: 400; }
 .task-row.completed .task-name { text-decoration: line-through; color: #777; }

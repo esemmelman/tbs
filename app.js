@@ -26,6 +26,22 @@ function taskScreen() {
 function screenDocument(parent) {
   return ['document', 'task'].includes(parent?.kind) ? parent : nodes.find(node => node.parent_id === parent?.id && node.kind === 'document');
 }
+function outstandingTaskCounts() {
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const counts = new Map();
+  for (const node of nodes) {
+    if (node.kind !== 'task' && !isTasksScreen(node)) continue;
+    const outstanding = node.kind === 'task' && !node.completed ? 1 : 0;
+    let ancestor = node.kind === 'task' ? byId.get(node.parent_id) : node;
+    const visited = new Set();
+    while (ancestor && !visited.has(ancestor.id)) {
+      visited.add(ancestor.id);
+      counts.set(ancestor.id, (counts.get(ancestor.id) || 0) + outstanding);
+      ancestor = byId.get(ancestor.parent_id);
+    }
+  }
+  return counts;
+}
 function navigate(hash) {
   if (location.hash === hash) { render(); return; }
   history.pushState({ menuDepth: (history.state?.menuDepth || 0) + 1 }, '', hash || location.pathname + location.search);
@@ -51,6 +67,7 @@ function render() {
   const focusedId = menu.contains(document.activeElement) ? document.activeElement.dataset.nodeId : null;
   menu.replaceChildren();
   if (!loaded) return;
+  const taskCounts = outstandingTaskCounts();
   const entries = nodes.filter(node => node.parent_id === (parent?.id || null) && node.id !== documentNode?.id)
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
   for (const entry of entries) {
@@ -86,7 +103,7 @@ function render() {
     const item = document.createElement(isLink ? 'a' : 'button');
     item.className = 'item';
     item.dataset.nodeId = entry.id;
-    item.textContent = entry.label;
+    item.textContent = entry.label + (taskCounts.has(entry.id) ? ' (' + taskCounts.get(entry.id) + ')' : '');
     if (entry.kind === 'document') {
       item.type = 'button';
       item.addEventListener('click', () => navigate('#' + entry.id));
