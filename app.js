@@ -95,6 +95,7 @@ function render() {
       button.type = 'button';
       button.className = 'item task-name';
       button.textContent = (entries.filter(n => n.kind === 'task').indexOf(entry) + 1) + '. ' + entry.label;
+      button.title = entry.label;
       button.addEventListener('click', () => navigate('#' + entry.id));
       row.append(checkbox, button);
       menu.append(row);

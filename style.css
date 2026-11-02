@@ -42,4 +42,6 @@ dialog button:disabled { opacity: .45; cursor: default; }
 .task-name { text-align: left; font-size: 18px; font-weight: 400; }
 .task-row.completed .task-name { text-decoration: line-through; color: #777; }
 .tasks-open .controls { margin-bottom: 22px; }
+.panel.tasks-open { width: min(100%, 760px); }
+.task-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-row + .task-row { margin-top: 6px; }
