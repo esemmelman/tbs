@@ -83,7 +83,7 @@ function createStudentDocuments(request) {
     editor.contentEditable = String(session.loaded);
     conflictControls.hidden = !session.conflict;
     status.textContent = session.conflict ? 'This document changed on another device. Your text is kept here. Choose which version to save.'
-      : session.error || (session.saving ? 'Saving…' : session.dirty ? 'Not saved yet…' : session.loaded ? 'Saved' : 'Loading document…');
+      : session.error || (session.saving ? 'Saving…' : session.dirty ? 'Not saved yet…' : session.loaded ? '' : 'Loading document…');
   }
   function capture() {
     if (!active?.loaded) return;

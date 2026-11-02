@@ -1,6 +1,6 @@
 # My Links
 
-A centered shared menu. Contacts opens the supplied Google spreadsheet and appears above Zoom. Zoom opens Ahava Singleman, Emelia Esterkin, Ever Meza, Sasha Esterkin, Stuart-Leo Singleman, and Talia Gladstein. Each student's screen contains Doc, which opens a separate rich text document. Use Main to return to the starting menu or Back to return to the previous screen.
+A centered shared menu. Contacts opens the supplied Google spreadsheet and appears above Zoom. Zoom opens Ahava Singleman, Emelia Esterkin, Ever Meza, Sasha Esterkin, Stuart-Leo Singleman, and Talia Gladstein. Clicking a student displays their existing rich text document directly, without an intermediate Doc link. Existing document links still work. Successful saves have no status message; loading, pending saves, conflicts, and errors remain visible. Use Main to return to the starting menu or Back to return to the previous screen.
 
 Menus are stored exclusively in `public.tbs_menu_nodes_v1` in the existing bnaimitzvah Supabase project (`fgomaujsdblpzxhnnqrg`). This dedicated table was checked against existing tables before creation. No other app tables are changed. `database/schema.sql` records the initial setup; do not rerun it on the existing table.
 

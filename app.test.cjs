@@ -62,16 +62,15 @@ async function client(t, db) {
   };
 }
 
-test('Contacts is first, student menus contain Doc, and Main/Back work', async t => {
+test('student names open their editor directly and Main/Back work', async t => {
   const c = await client(t, database());
   assert.deepEqual(c.labels(), ['Contacts', 'Zoom']);
   assert.equal(c.get('#menu a').href, contactsURL);
   c.w.navigate('#zoom');
   assert.deepEqual(c.labels(), ['Emelia Esterkin', 'Sasha Esterkin']);
   c.get('#menu a').click();
-  assert.deepEqual(c.labels(), ['Doc']);
-  assert.equal(c.get('#menu .item').tagName, 'BUTTON');
-  c.get('#menu .item').click();
+  assert.deepEqual(c.labels(), []);
+  assert.equal(c.w.location.hash, '#emelia-esterkin');
   await settle();
   assert.equal(c.get('#document-screen').hidden, false);
   assert.equal(c.get('#document-title').textContent, 'Emelia Esterkin — Doc');
@@ -148,7 +147,7 @@ test('offline saves retain a draft, recover, and sanitization preserves only saf
   await c.w.syncAll();
   assert.equal(db.documents.get('sasha-esterkin-doc').content_html, '<u>Offline draft</u>');
   assert.equal(c.w.localStorage.getItem('tbs.doc.draft.v1:sasha-esterkin-doc'), null);
-  assert.equal(c.get('#document-status').textContent, 'Saved');
+  assert.equal(c.get('#document-status').textContent, '');
 });
 
 test('Modify adds screens, edits and moves items, validates URLs and deletes shared items', async t => {

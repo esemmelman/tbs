@@ -18,31 +18,35 @@ function currentMenu() {
   const id = location.hash.slice(1);
   return nodes.find(node => node.id === id && (node.kind === 'menu' || node.kind === 'document')) || null;
 }
+function screenDocument(parent) {
+  return parent?.kind === 'document' ? parent : nodes.find(node => node.parent_id === parent?.id && node.kind === 'document');
+}
 function navigate(hash) {
   if (location.hash === hash) { render(); return; }
   history.pushState({ menuDepth: (history.state?.menuDepth || 0) + 1 }, '', hash || location.pathname + location.search);
   status.textContent = '';
   render();
-  if (currentMenu()?.kind === 'document') document.querySelector('#document-title').focus();
+  if (screenDocument(currentMenu())) document.querySelector('#document-title').focus();
   else menu.querySelector('.item')?.focus();
 }
 function render() {
   const parent = currentMenu();
   main.disabled = !location.hash;
   back.disabled = !(history.state?.menuDepth > 0);
-  const isDocument = parent?.kind === 'document';
+  const documentNode = screenDocument(parent);
+  const isDocument = Boolean(documentNode);
   panel.classList.toggle('document-open', isDocument);
   menu.hidden = isDocument;
   if (isDocument) {
-    const student = nodes.find(node => node.id === parent.parent_id);
-    documents.open(parent, student?.label || 'Student');
+    const student = nodes.find(node => node.id === documentNode.parent_id);
+    documents.open(documentNode, student?.label || 'Student');
   } else documents.close();
   menu.hidden = false;
   menu.setAttribute('aria-label', parent?.label || 'Main menu');
   const focusedId = menu.contains(document.activeElement) ? document.activeElement.dataset.nodeId : null;
   menu.replaceChildren();
   if (!loaded) return;
-  const entries = nodes.filter(node => node.parent_id === (parent?.id || null))
+  const entries = nodes.filter(node => node.parent_id === (parent?.id || null) && node.id !== documentNode?.id)
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
   for (const entry of entries) {
     const isLink = entry.kind !== 'document';
