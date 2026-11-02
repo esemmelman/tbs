@@ -109,6 +109,7 @@ test('rich text saves per student and syncs to another client; date insertion sa
   await a.save();
   assert.equal(db.documents.get('sasha-esterkin-doc').content_html, '<i>Sasha only</i>');
   assert.match(db.documents.get('emelia-esterkin-doc').content_html, /Lesson notes/);
+  b.get('#document-editor').blur(); // Remote updates wait while the automatically focused editor is active.
   await b.w.syncAll();
   assert.match(b.get('#document-editor').textContent, new RegExp(String(new Date().getFullYear())));
 });
@@ -270,4 +271,22 @@ test('outstanding tasks roll up through every ancestor and update after completi
   await b.w.syncAll(); assert.ok(b.labels().includes('Temple Beth David (1)'));
   db.nodes = db.nodes.filter(n => n.id !== 'task-c');
   await b.w.syncAll(); assert.ok(b.labels().includes('Temple Beth David (0)'));
+});
+
+test('opening rich text places the caret inside once, including reopening a loaded document', async t => {
+  const db = database();
+  db.documents.get('emelia-esterkin-doc').content_html = '<b>Existing notes</b>';
+  const c = await client(t, db);
+  c.w.navigate('#emelia-esterkin'); await settle();
+  assert.equal(c.w.document.activeElement, c.get('#document-editor'));
+  let range = c.w.getSelection().getRangeAt(0);
+  assert.equal(range.collapsed, true);
+  assert.equal(range.startContainer, c.get('#document-editor'));
+  assert.equal(range.startOffset, c.get('#document-editor').childNodes.length);
+  c.get('#main').focus(); await c.w.syncAll();
+  assert.equal(c.w.document.activeElement, c.get('#main'));
+  c.w.navigate(''); c.w.navigate('#emelia-esterkin'); await settle();
+  assert.equal(c.w.document.activeElement, c.get('#document-editor'));
+  range = c.w.getSelection().getRangeAt(0);
+  assert.equal(range.startOffset, c.get('#document-editor').childNodes.length);
 });

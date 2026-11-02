@@ -84,6 +84,17 @@ function createStudentDocuments(request) {
     conflictControls.hidden = !session.conflict;
     status.textContent = session.conflict ? 'This document changed on another device. Your text is kept here. Choose which version to save.'
       : session.error || (session.saving ? 'Saving…' : session.dirty ? 'Not saved yet…' : session.loaded ? '' : 'Loading document…');
+    if (session.loaded && session.focusOnOpen) {
+      session.focusOnOpen = false;
+      editor.focus();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      const caret = window.getSelection();
+      caret.removeAllRanges();
+      caret.addRange(range);
+      selection = range.cloneRange();
+    }
   }
   function capture() {
     if (!active?.loaded) return;
@@ -268,6 +279,7 @@ function createStudentDocuments(request) {
       let session = sessions.get(node.id);
       if (!session) { session = { id: node.id, html: '', revision: 0, loaded: false, dirty: false }; sessions.set(node.id, session); }
       active = session;
+      session.focusOnOpen = true;
       selection = null;
       composing = false;
       screen.hidden = false;

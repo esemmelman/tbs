@@ -47,8 +47,7 @@ function navigate(hash) {
   history.pushState({ menuDepth: (history.state?.menuDepth || 0) + 1 }, '', hash || location.pathname + location.search);
   status.textContent = '';
   render();
-  if (screenDocument(currentMenu())) document.querySelector('#document-title').focus();
-  else menu.querySelector('.item')?.focus();
+  if (!screenDocument(currentMenu())) menu.querySelector('.item')?.focus();
 }
 function render() {
   const parent = currentMenu();
