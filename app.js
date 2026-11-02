@@ -36,16 +36,15 @@ function render() {
   if (isDocument) {
     const student = nodes.find(node => node.id === parent.parent_id);
     documents.open(parent, student?.label || 'Student');
-    return;
-  }
-  documents.close();
+  } else documents.close();
+  menu.hidden = false;
   menu.setAttribute('aria-label', parent?.label || 'Main menu');
   const focusedId = menu.contains(document.activeElement) ? document.activeElement.dataset.nodeId : null;
   menu.replaceChildren();
   if (!loaded) return;
   const entries = nodes.filter(node => node.parent_id === (parent?.id || null));
   for (const entry of entries) {
-    const isLink = entry.kind === 'menu' || Boolean(entry.url);
+    const isLink = entry.kind !== 'document';
     const item = document.createElement(isLink ? 'a' : 'button');
     item.className = 'item';
     item.dataset.nodeId = entry.id;
@@ -53,7 +52,7 @@ function render() {
     if (entry.kind === 'document') {
       item.type = 'button';
       item.addEventListener('click', () => navigate('#' + entry.id));
-    } else if (entry.kind === 'menu') {
+    } else if (!entry.url) {
       item.href = '#' + entry.id;
       item.addEventListener('click', event => {
         if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -69,7 +68,7 @@ function render() {
     menu.append(item);
     if (entry.id === focusedId) item.focus();
   }
-  if (!entries.length) status.textContent = 'This menu is empty.';
+  if (!entries.length && !isDocument) status.textContent = 'This menu is empty.';
 }
 async function request(path, options = {}) {
   const controller = new AbortController();
@@ -121,3 +120,106 @@ setInterval(() => { if (!document.hidden) syncAll(); }, 5000);
 status.textContent = 'Loading menus…';
 render();
 syncMenus();
+
+const modifyDialog = document.querySelector('#modify-dialog');
+const modifyForm = document.querySelector('#modify-form');
+const modifyItem = document.querySelector('#modify-item');
+const modifyLabel = document.querySelector('#modify-label');
+const modifyURL = document.querySelector('#modify-url');
+const modifyParent = document.querySelector('#modify-parent');
+const modifyStatus = document.querySelector('#modify-status');
+let modifying = false;
+function descendants(id) {
+  const ids = new Set([id]);
+  let count;
+  do { count = ids.size; nodes.forEach(node => { if (ids.has(node.parent_id)) ids.add(node.id); }); } while (count !== ids.size);
+  return ids;
+}
+function screenName(node, seen = new Set()) {
+  if (!node || seen.has(node.id)) return 'Main';
+  seen.add(node.id);
+  return screenName(nodes.find(n => n.id === node.parent_id), seen) + ' / ' + node.label;
+}
+function populateModify() {
+  const selected = nodes.find(node => node.id === modifyItem.value);
+  modifyLabel.value = selected?.label || '';
+  modifyURL.value = selected?.url || '';
+  modifyURL.disabled = selected?.kind === 'document';
+  const excluded = selected ? descendants(selected.id) : new Set();
+  modifyParent.replaceChildren(new Option('Main', ''));
+  nodes.filter(node => !node.url && !excluded.has(node.id)).forEach(node => {
+    modifyParent.add(new Option(screenName(node), node.id));
+  });
+  modifyParent.value = selected?.parent_id || (selected ? '' : currentMenu()?.id || '');
+  document.querySelector('#modify-save').textContent = selected ? 'Save' : 'Add';
+  document.querySelector('#modify-delete').disabled = !selected;
+  modifyStatus.textContent = '';
+}
+document.querySelector('#modify').addEventListener('click', async () => {
+  await syncMenus();
+  if (!loaded) return;
+  modifyItem.replaceChildren(new Option('Add a new item', ''));
+  const current = currentMenu()?.id || null;
+  [...nodes.filter(n => n.parent_id === current), ...nodes.filter(n => n.parent_id !== current)].forEach(node => {
+    modifyItem.add(new Option(screenName(node), node.id));
+  });
+  populateModify();
+  modifyDialog.showModal();
+  modifyLabel.focus();
+});
+modifyItem.addEventListener('change', populateModify);
+document.querySelector('#modify-close').addEventListener('click', () => modifyDialog.close());
+modifyDialog.addEventListener('cancel', event => { if (modifying) event.preventDefault(); });
+async function modifyRequest(action) {
+  if (modifying) return;
+  modifying = true;
+  const controls = [...modifyForm.querySelectorAll('input, select, button')];
+  const disabled = controls.map(control => control.disabled);
+  controls.forEach(control => { control.disabled = true; });
+  modifyStatus.textContent = 'Saving…';
+  try {
+    await action();
+    await syncMenus();
+    if (location.hash && !nodes.some(node => node.id === location.hash.slice(1))) navigate('');
+    modifyDialog.close();
+  } catch (error) {
+    modifyStatus.textContent = error.message || 'Unable to save. Please try again.';
+  } finally {
+    modifying = false;
+    controls.forEach((control, i) => { control.disabled = disabled[i]; });
+  }
+}
+modifyForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const selected = nodes.find(node => node.id === modifyItem.value);
+  const label = modifyLabel.value.trim();
+  const url = modifyURL.value.trim();
+  const parent_id = modifyParent.value || null;
+  if (!label) { modifyStatus.textContent = 'Enter a name.'; return; }
+  if (url && !/^https?:\/\//i.test(url)) { modifyStatus.textContent = 'Use an http:// or https:// URL.'; return; }
+  if (selected && descendants(selected.id).has(parent_id)) { modifyStatus.textContent = 'An item cannot be placed inside itself.'; return; }
+  if (url && selected && nodes.some(node => node.parent_id === selected.id)) {
+    modifyStatus.textContent = 'Move or delete the items inside this screen before giving it a URL.'; return;
+  }
+  const row = { label, url: url || null, parent_id, kind: selected?.kind === 'document' ? 'document' : url ? 'item' : 'menu' };
+  if (!selected) {
+    row.id = crypto.randomUUID();
+    row.sort_order = Math.max(-1, ...nodes.filter(n => n.parent_id === parent_id).map(n => n.sort_order || 0)) + 1;
+  }
+  modifyRequest(async () => {
+    const result = await request(TABLE + (selected ? '?id=eq.' + encodeURIComponent(selected.id) : ''), {
+      method: selected ? 'PATCH' : 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(row)
+    });
+    if (!result.length) throw new Error('The item was not saved. Refresh and try again.');
+  });
+});
+document.querySelector('#modify-delete').addEventListener('click', () => {
+  const selected = nodes.find(node => node.id === modifyItem.value);
+  if (!selected) return;
+  const count = descendants(selected.id).size - 1;
+  if (!confirm('Delete “' + selected.label + '”' + (count ? ' and its ' + count + ' nested item(s)' : '') + '? Any attached documents will also be deleted.')) return;
+  modifyRequest(async () => {
+    const result = await request(TABLE + '?id=eq.' + encodeURIComponent(selected.id), { method: 'DELETE', headers: { Prefer: 'return=representation' } });
+    if (!result.length) throw new Error('The item was not deleted. Refresh and try again.');
+  });
+});

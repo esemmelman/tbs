@@ -23,7 +23,13 @@ async function client(t, db) {
     if (db.offline) throw new Error('Offline');
     const path = new URL(url);
     let rows;
-    if (path.pathname.endsWith('tbs_menu_nodes_v1')) rows = db.nodes;
+    if (path.pathname.endsWith('tbs_menu_nodes_v1')) {
+      const id = path.searchParams.get('id')?.slice(3);
+      if (options.method === 'POST') { const row = JSON.parse(options.body); db.nodes.push(row); rows = [row]; }
+      else if (options.method === 'PATCH') { rows = db.nodes.filter(n => n.id === id); rows.forEach(n => Object.assign(n, JSON.parse(options.body))); }
+      else if (options.method === 'DELETE') { rows = db.nodes.filter(n => n.id === id); db.nodes = db.nodes.filter(n => n.id !== id); }
+      else rows = db.nodes;
+    }
     else {
       const id = path.searchParams.get('node_id').slice(3);
       const row = db.documents.get(id);
@@ -40,6 +46,9 @@ async function client(t, db) {
     if (command === 'insertHTML') w.document.querySelector('#document-editor').insertAdjacentHTML('beforeend', value);
     return true;
   };
+  w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  w.HTMLDialogElement.prototype.close = function () { this.open = false; };
+  w.confirm = () => true;
   w.eval(fs.readFileSync('documents.js', 'utf8'));
   w.eval(fs.readFileSync('app.js', 'utf8'));
   await settle();
@@ -140,4 +149,36 @@ test('offline saves retain a draft, recover, and sanitization preserves only saf
   assert.equal(db.documents.get('sasha-esterkin-doc').content_html, '<u>Offline draft</u>');
   assert.equal(c.w.localStorage.getItem('tbs.doc.draft.v1:sasha-esterkin-doc'), null);
   assert.equal(c.get('#document-status').textContent, 'Saved');
+});
+
+test('Modify adds screens, edits and moves items, validates URLs and deletes shared items', async t => {
+  const db = database(), c = await client(t, db), other = await client(t, db);
+  c.w.navigate('#zoom');
+  c.get('#modify').click(); await settle();
+  assert.equal(c.get('#modify-dialog').open, true);
+  assert.equal(c.get('#modify-parent').value, 'zoom');
+  c.get('#modify-label').value = 'New screen';
+  c.get('#modify-form').dispatchEvent(new c.w.Event('submit', { cancelable: true })); await settle();
+  const added = db.nodes.find(n => n.label === 'New screen');
+  assert.equal(added.kind, 'menu'); assert.equal(added.url, null);
+  await other.w.syncAll(); other.w.navigate('#zoom'); assert.ok(other.labels().includes('New screen'));
+  c.get('#modify').click(); await settle();
+  c.get('#modify-item').value = added.id;
+  c.get('#modify-item').dispatchEvent(new c.w.Event('change'));
+  assert.ok(![...c.get('#modify-parent').options].some(o => o.value === added.id));
+  c.get('#modify-label').value = 'New link'; c.get('#modify-url').value = 'javascript:alert(1)';
+  c.get('#modify-form').dispatchEvent(new c.w.Event('submit', { cancelable: true })); await settle();
+  assert.match(c.get('#modify-status').textContent, /https/); assert.equal(added.kind, 'menu');
+  c.get('#modify-url').value = 'https://example.com/'; c.get('#modify-parent').value = '';
+  c.get('#modify-form').dispatchEvent(new c.w.Event('submit', { cancelable: true })); await settle();
+  assert.equal(added.kind, 'item'); assert.equal(added.parent_id, null);
+  c.w.navigate(''); assert.ok(c.labels().includes('New link'));
+  c.get('#modify').click(); await settle(); c.get('#modify-item').value = added.id;
+  c.get('#modify-item').dispatchEvent(new c.w.Event('change'));
+  db.offline = true; c.get('#modify-delete').click(); await settle();
+  assert.equal(c.get('#modify-dialog').open, true); assert.ok(db.nodes.includes(added));
+  db.offline = false; c.get('#modify-delete').click(); await settle();
+  assert.ok(!db.nodes.includes(added)); assert.equal(c.get('#modify-dialog').open, false);
+  await c.open('emelia-esterkin'); c.get('#modify').click(); await settle();
+  assert.equal(c.get('#modify-parent').value, 'emelia-esterkin-doc');
 });

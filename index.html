@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <title>My Links</title>
-  <link rel="stylesheet" href="style.css?v=13">
-  <script src="documents.js?v=13" defer></script>
-  <script src="app.js?v=13" defer></script>
+  <link rel="stylesheet" href="style.css?v=14">
+  <script src="documents.js?v=14" defer></script>
+  <script src="app.js?v=14" defer></script>
 </head>
 <body>
-  <span class="revision" aria-label="Revision 13">Rev 13</span>
+  <span class="revision" aria-label="Revision 14">Rev 14</span>
   <main class="panel" aria-label="My links">
     <div class="controls" aria-label="Menu navigation">
       <button id="main" type="button">Main</button>
       <button id="back" type="button">Back</button>
+      <button id="modify" type="button">Modify</button>
     </div>
     <nav id="menu" aria-label="Categories"></nav>
     <section id="document-screen" hidden aria-labelledby="document-title">
@@ -35,5 +36,21 @@
     </section>
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </main>
+  <dialog id="modify-dialog" aria-labelledby="modify-title">
+    <form id="modify-form">
+      <h2 id="modify-title">Modify items</h2>
+      <label>Item<select id="modify-item"><option value="">Add a new item</option></select></label>
+      <label>Name<input id="modify-label" required maxlength="200"></label>
+      <label>URL (optional)<input id="modify-url" type="url" placeholder="https://example.com"></label>
+      <label>Parent screen<select id="modify-parent"></select></label>
+      <p class="hint">Leave URL blank to open a screen with its own items.</p>
+      <p id="modify-status" role="status" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button id="modify-save" type="submit">Add</button>
+        <button id="modify-delete" type="button" disabled>Delete</button>
+        <button id="modify-close" type="button">Close</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

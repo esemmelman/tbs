@@ -27,3 +27,13 @@ nav { display: grid; gap: 0; }
 #document-editor p, #document-editor div, #document-editor li { margin: 0; }
 #document-editor ul, #document-editor ol, #document-editor blockquote { margin-top: 0; margin-bottom: 0; }
 #document-conflict { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+dialog { width: min(440px, calc(100% - 32px)); max-height: 90svh; overflow: auto; border: 1px solid #cad1c7; border-radius: 8px; padding: 22px; color: inherit; }
+dialog::backdrop { background: #0005; }
+dialog h2 { margin: 0 0 18px; font-size: 22px; }
+dialog label { display: grid; gap: 5px; margin: 12px 0; }
+dialog input, dialog select, dialog button { font: inherit; padding: 8px; border: 1px solid #cad1c7; border-radius: 4px; background: white; color: inherit; min-width: 0; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hint { font-size: 13px; color: #666; }
+#modify-status { font-size: 14px; }
+dialog button { cursor: pointer; }
+dialog button:disabled { opacity: .45; cursor: default; }
