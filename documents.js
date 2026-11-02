@@ -60,6 +60,12 @@ function cleanDocumentHTML(html) {
   return output.innerHTML;
 }
 
+function documentHasContent(html) {
+  const element = document.createElement('div');
+  element.innerHTML = cleanDocumentHTML(html || '');
+  return Boolean(element.textContent.replace(/[\s\u200B-\u200D\uFEFF]/g, ''));
+}
+
 function createStudentDocuments(request) {
   const screen = document.querySelector('#document-screen');
   const editor = document.querySelector('#document-editor');
@@ -271,6 +277,10 @@ function createStudentDocuments(request) {
     }
   });
   return {
+    hasContent(id, savedContent = false) {
+      const session = sessions.get(id);
+      return session?.dirty ? documentHasContent(session.html) : savedContent;
+    },
     open(node, student) {
       document.querySelector('#document-title').textContent = node.kind === 'task' ? node.label : student + ' — Doc';
       editor.setAttribute('aria-label', node.kind === 'task' ? node.label + ' details' : student + ' document');

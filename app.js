@@ -11,6 +11,18 @@ let nodes = [];
 let loaded = false;
 let syncing = false;
 let fingerprint = '';
+let documentContent = new Map();
+
+function appendDocumentIcon(item, entry) {
+  const doc = screenDocument(entry);
+  if (!doc || !documents.hasContent(doc.id, documentContent.get(doc.id))) return;
+  const icon = document.createElement('span');
+  icon.className = 'document-icon';
+  icon.textContent = ' 📄';
+  icon.setAttribute('role', 'img');
+  icon.setAttribute('aria-label', 'Document has content');
+  item.append(icon);
+}
 
 // Navigation stays on this device; menu content is shared in Supabase.
 history.replaceState({ menuDepth: 0 }, '');
@@ -95,6 +107,7 @@ function render() {
       button.className = 'item task-name';
       button.textContent = (entries.filter(n => n.kind === 'task').indexOf(entry) + 1) + '. ' + entry.label;
       button.title = entry.label;
+      appendDocumentIcon(button, entry);
       button.addEventListener('click', () => navigate('#' + entry.id));
       row.append(checkbox, button);
       menu.append(row);
@@ -105,6 +118,7 @@ function render() {
     item.className = 'item';
     item.dataset.nodeId = entry.id;
     item.textContent = entry.label + (taskCounts.has(entry.id) ? ' (' + taskCounts.get(entry.id) + ')' : '');
+    appendDocumentIcon(item, entry);
     if (entry.kind === 'document') {
       item.type = 'button';
       item.addEventListener('click', () => navigate('#' + entry.id));
@@ -139,17 +153,22 @@ async function request(path, options = {}) {
     return await response.json();
   } finally { clearTimeout(timeout); }
 }
-async function syncAll() { await Promise.allSettled([syncMenus(), documents.sync()]); }
+async function syncAll() { await documents.sync(); await syncMenus(); }
 async function syncMenus() {
   if (syncing) return;
   syncing = true;
   try {
-    const data = await request(TABLE + '?select=id,parent_id,label,kind,url,sort_order,completed&order=sort_order.asc,id.asc');
+    const [data, docs] = await Promise.all([
+      request(TABLE + '?select=id,parent_id,label,kind,url,sort_order,completed&order=sort_order.asc,id.asc'),
+      request('tbs_student_documents_v1?select=node_id,content_html&order=node_id.asc')
+    ]);
     if (!Array.isArray(data)) throw new Error('Invalid menu response');
-    const nextFingerprint = JSON.stringify(data);
+    const content = new Map(docs.map(row => [row.node_id, documentHasContent(row.content_html)]));
+    const nextFingerprint = JSON.stringify([data, [...content]]);
     const hadSyncError = status.dataset.syncError === 'true';
     if (!loaded || nextFingerprint !== fingerprint) {
       nodes = data;
+      documentContent = content;
       fingerprint = nextFingerprint;
       loaded = true;
       status.textContent = '';

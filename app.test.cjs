@@ -34,6 +34,7 @@ async function client(t, db) {
       else rows = db.nodes;
     }
     else {
+      if (!path.searchParams.has('node_id')) return { ok: true, json: async () => structuredClone([...db.documents.values()]) };
       const id = path.searchParams.get('node_id').slice(3);
       const row = db.documents.get(id);
       if (options.method === 'PATCH') {
@@ -64,6 +65,29 @@ async function client(t, db) {
     async save() { await w.syncAll(); await settle(); }
   };
 }
+
+test('doc icons reflect text, empty formatting, local edits and remote changes', async t => {
+  const db = database();
+  db.documents.get('emelia-esterkin-doc').content_html = '<b>Notes</b>';
+  db.documents.get('sasha-esterkin-doc').content_html = '<p>&nbsp;</p><div><br></div>';
+  const c = await client(t, db);
+  c.w.navigate('#zoom');
+  assert.deepEqual(c.labels(), ['Emelia Esterkin 📄', 'Sasha Esterkin']);
+  assert.equal(c.get('.document-icon').getAttribute('aria-label'), 'Document has content');
+  c.w.navigate('#emelia-esterkin'); await settle();
+  c.edit('<p><br></p>');
+  c.w.navigate('#zoom');
+  assert.equal(c.get('.document-icon'), null);
+  await c.save();
+  db.documents.get('sasha-esterkin-doc').content_html = '<p>New notes</p>';
+  await c.w.syncAll();
+  assert.deepEqual(c.labels(), ['Emelia Esterkin', 'Sasha Esterkin 📄']);
+  db.nodes.push({ id: 'tasks', parent_id: null, label: 'Tasks', kind: 'menu' },
+    { id: 'task', parent_id: 'tasks', label: 'Call', kind: 'task' });
+  db.documents.set('task', { node_id: 'task', content_html: 'Details', revision: 0 });
+  await c.w.syncAll(); c.w.navigate('#tasks');
+  assert.deepEqual(c.labels(), ['1. Call 📄']);
+});
 
 test('student names open their editor directly and Main/Back work', async t => {
   const c = await client(t, database());

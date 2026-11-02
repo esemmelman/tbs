@@ -21,3 +21,5 @@ The current revision is displayed at the top-left of every menu. When publishing
 Screens named Tasks display alphabetical, sequentially numbered tasks. Use Modify to add, rename, move, or delete tasks. Checkboxes toggle completion and strikethrough without opening the task. Click a task name to open its autosaving rich text details with the existing formatting, draft recovery, and conflict handling. New tasks automatically get a document row through a scoped SECURITY INVOKER trigger. The completed column, task type, trigger, and permissions are recorded in database/tasks.sql. No sign-in is required, matching the app's shared editing model.
 
 Menu items leading to Tasks display the total unfinished tasks in parentheses across all descendant screens. Completed tasks are excluded; multiple branches are combined, and zero is displayed when none remain. Task names use smaller 18px text.
+
+Items with text in their attached document display a trailing document icon. Empty formatting does not count as content; indicators refresh with shared content and reflect unsaved local edits when returning to the menu.
