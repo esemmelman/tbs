@@ -42,7 +42,8 @@ function render() {
   const focusedId = menu.contains(document.activeElement) ? document.activeElement.dataset.nodeId : null;
   menu.replaceChildren();
   if (!loaded) return;
-  const entries = nodes.filter(node => node.parent_id === (parent?.id || null));
+  const entries = nodes.filter(node => node.parent_id === (parent?.id || null))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
   for (const entry of entries) {
     const isLink = entry.kind !== 'document';
     const item = document.createElement(isLink ? 'a' : 'button');
@@ -151,6 +152,7 @@ function populateModify() {
     modifyParent.add(new Option(screenName(node), node.id));
   });
   modifyParent.value = selected?.parent_id || (selected ? '' : currentMenu()?.id || '');
+  modifyParent.closest('label').hidden = !selected;
   document.querySelector('#modify-save').textContent = selected ? 'Save' : 'Add';
   document.querySelector('#modify-delete').disabled = !selected;
   modifyStatus.textContent = '';
@@ -194,7 +196,7 @@ modifyForm.addEventListener('submit', event => {
   const selected = nodes.find(node => node.id === modifyItem.value);
   const label = modifyLabel.value.trim();
   const url = modifyURL.value.trim();
-  const parent_id = modifyParent.value || null;
+  const parent_id = selected ? modifyParent.value || null : currentMenu()?.id || null;
   if (!label) { modifyStatus.textContent = 'Enter a name.'; return; }
   if (url && !/^https?:\/\//i.test(url)) { modifyStatus.textContent = 'Use an http:// or https:// URL.'; return; }
   if (selected && descendants(selected.id).has(parent_id)) { modifyStatus.textContent = 'An item cannot be placed inside itself.'; return; }

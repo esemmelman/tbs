@@ -157,14 +157,18 @@ test('Modify adds screens, edits and moves items, validates URLs and deletes sha
   c.get('#modify').click(); await settle();
   assert.equal(c.get('#modify-dialog').open, true);
   assert.equal(c.get('#modify-parent').value, 'zoom');
+  assert.equal(c.get('#modify-parent').closest('label').hidden, true);
+  c.get('#modify-parent').value = ''; // Adding always uses the current screen.
   c.get('#modify-label').value = 'New screen';
   c.get('#modify-form').dispatchEvent(new c.w.Event('submit', { cancelable: true })); await settle();
   const added = db.nodes.find(n => n.label === 'New screen');
+  assert.equal(added.parent_id, 'zoom');
   assert.equal(added.kind, 'menu'); assert.equal(added.url, null);
   await other.w.syncAll(); other.w.navigate('#zoom'); assert.ok(other.labels().includes('New screen'));
   c.get('#modify').click(); await settle();
   c.get('#modify-item').value = added.id;
   c.get('#modify-item').dispatchEvent(new c.w.Event('change'));
+  assert.equal(c.get('#modify-parent').closest('label').hidden, false);
   assert.ok(![...c.get('#modify-parent').options].some(o => o.value === added.id));
   c.get('#modify-label').value = 'New link'; c.get('#modify-url').value = 'javascript:alert(1)';
   c.get('#modify-form').dispatchEvent(new c.w.Event('submit', { cancelable: true })); await settle();
@@ -181,4 +185,15 @@ test('Modify adds screens, edits and moves items, validates URLs and deletes sha
   assert.ok(!db.nodes.includes(added)); assert.equal(c.get('#modify-dialog').open, false);
   await c.open('emelia-esterkin'); c.get('#modify').click(); await settle();
   assert.equal(c.get('#modify-parent').value, 'emelia-esterkin-doc');
+});
+
+test('each screen sorts names alphabetically regardless of database order', async t => {
+  const db = database();
+  db.nodes.unshift({ id: 'zebra', parent_id: null, label: 'Zebra', kind: 'menu' });
+  db.nodes.push({ id: 'alpha', parent_id: null, label: 'alpha', kind: 'menu' });
+  db.nodes.push({ id: 'aaron', parent_id: 'zoom', label: 'Aaron', kind: 'menu' });
+  const c = await client(t, db);
+  assert.deepEqual(c.labels(), ['alpha', 'Contacts', 'Zebra', 'Zoom']);
+  c.w.navigate('#zoom');
+  assert.deepEqual(c.labels(), ['Aaron', 'Emelia Esterkin', 'Sasha Esterkin']);
 });
