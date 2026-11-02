@@ -52,6 +52,7 @@ function navigate(hash) {
 }
 function render() {
   const parent = currentMenu();
+  panel.classList.toggle('tasks-open', isTasksScreen(parent));
   main.disabled = !location.hash;
   back.disabled = !(history.state?.menuDepth > 0);
   const documentNode = screenDocument(parent);

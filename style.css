@@ -41,3 +41,5 @@ dialog button:disabled { opacity: .45; cursor: default; }
 .task-row input { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
 .task-name { text-align: left; font-size: 18px; font-weight: 400; }
 .task-row.completed .task-name { text-decoration: line-through; color: #777; }
+.tasks-open .controls { margin-bottom: 22px; }
+.task-row + .task-row { margin-top: 6px; }
