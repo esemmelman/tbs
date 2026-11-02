@@ -45,3 +45,10 @@ dialog button:disabled { opacity: .45; cursor: default; }
 .panel.tasks-open { width: 100%; }
 .task-name { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .task-row + .task-row { margin-top: 6px; }
+.tasks-open #menu { padding-left: clamp(0px, 16vw, 180px); }
+.tasks-open .task-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; column-gap: 12px; text-align: left; }
+.tasks-open .task-row input { margin-top: 7px; }
+.tasks-open .task-name { width: 100%; text-align: left; }
+@media (max-width: 768px), (pointer: coarse) {
+  .tasks-open .task-row + .task-row { margin-top: 12px; }
+}
