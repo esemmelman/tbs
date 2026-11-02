@@ -37,11 +37,11 @@ dialog input, dialog select, dialog button { font: inherit; padding: 8px; border
 #modify-status { font-size: 14px; }
 dialog button { cursor: pointer; }
 dialog button:disabled { opacity: .45; cursor: default; }
-.task-row { display: flex; align-items: center; gap: 10px; text-align: left; }
-.task-row input { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
-.task-name { text-align: left; font-size: 18px; font-weight: 400; }
+.task-row { display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.task-row input { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; margin: 0; }
+.task-name { width: auto; text-align: center; font-size: 18px; font-weight: 400; }
 .task-row.completed .task-name { text-decoration: line-through; color: #777; }
 .tasks-open .controls { margin-bottom: 22px; }
-.panel.tasks-open { width: min(100%, 760px); }
-.task-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel.tasks-open { width: 100%; }
+.task-name { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .task-row + .task-row { margin-top: 6px; }
