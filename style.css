@@ -37,3 +37,7 @@ dialog input, dialog select, dialog button { font: inherit; padding: 8px; border
 #modify-status { font-size: 14px; }
 dialog button { cursor: pointer; }
 dialog button:disabled { opacity: .45; cursor: default; }
+.task-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+.task-row input { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
+.task-name { text-align: left; }
+.task-row.completed .task-name { text-decoration: line-through; color: #777; }

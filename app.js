@@ -16,10 +16,15 @@ let fingerprint = '';
 history.replaceState({ menuDepth: 0 }, '');
 function currentMenu() {
   const id = location.hash.slice(1);
-  return nodes.find(node => node.id === id && (node.kind === 'menu' || node.kind === 'document')) || null;
+  return nodes.find(node => node.id === id && ['menu', 'document', 'task'].includes(node.kind)) || null;
+}
+function isTasksScreen(node) { return node?.kind === 'menu' && /^tasks$/i.test(node.label.trim()); }
+function taskScreen() {
+  const current = currentMenu();
+  return current?.kind === 'task' ? nodes.find(n => n.id === current.parent_id) : isTasksScreen(current) ? current : null;
 }
 function screenDocument(parent) {
-  return parent?.kind === 'document' ? parent : nodes.find(node => node.parent_id === parent?.id && node.kind === 'document');
+  return ['document', 'task'].includes(parent?.kind) ? parent : nodes.find(node => node.parent_id === parent?.id && node.kind === 'document');
 }
 function navigate(hash) {
   if (location.hash === hash) { render(); return; }
@@ -49,6 +54,34 @@ function render() {
   const entries = nodes.filter(node => node.parent_id === (parent?.id || null) && node.id !== documentNode?.id)
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
   for (const entry of entries) {
+    if (entry.kind === 'task') {
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = Boolean(entry.completed);
+      checkbox.setAttribute('aria-label', 'Complete ' + entry.label);
+      checkbox.addEventListener('change', async () => {
+        checkbox.disabled = true;
+        try {
+          const result = await request(TABLE + '?id=eq.' + encodeURIComponent(entry.id), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ completed: checkbox.checked }) });
+          if (!result.length) throw new Error('Task unavailable');
+          entry.completed = checkbox.checked;
+          row.classList.toggle('completed', entry.completed);
+          status.textContent = '';
+        } catch { checkbox.checked = Boolean(entry.completed); status.textContent = 'Unable to update task. Please try again.'; }
+        finally { checkbox.disabled = false; }
+      });
+      row.classList.toggle('completed', Boolean(entry.completed));
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'item task-name';
+      button.textContent = (entries.filter(n => n.kind === 'task').indexOf(entry) + 1) + '. ' + entry.label;
+      button.addEventListener('click', () => navigate('#' + entry.id));
+      row.append(checkbox, button);
+      menu.append(row);
+      continue;
+    }
     const isLink = entry.kind !== 'document';
     const item = document.createElement(isLink ? 'a' : 'button');
     item.className = 'item';
@@ -93,7 +126,7 @@ async function syncMenus() {
   if (syncing) return;
   syncing = true;
   try {
-    const data = await request(TABLE + '?select=id,parent_id,label,kind,url,sort_order&order=sort_order.asc,id.asc');
+    const data = await request(TABLE + '?select=id,parent_id,label,kind,url,sort_order,completed&order=sort_order.asc,id.asc');
     if (!Array.isArray(data)) throw new Error('Invalid menu response');
     const nextFingerprint = JSON.stringify(data);
     const hadSyncError = status.dataset.syncError === 'true';
@@ -147,15 +180,19 @@ function screenName(node, seen = new Set()) {
 }
 function populateModify() {
   const selected = nodes.find(node => node.id === modifyItem.value);
+  const isTask = selected ? selected.kind === 'task' : Boolean(taskScreen());
+  document.querySelector('#modify-title').textContent = taskScreen() ? 'Modify tasks' : 'Modify items';
+  modifyURL.closest('label').hidden = isTask;
+  modifyForm.querySelector('.hint').hidden = isTask;
   modifyLabel.value = selected?.label || '';
   modifyURL.value = selected?.url || '';
-  modifyURL.disabled = selected?.kind === 'document';
+  modifyURL.disabled = isTask || selected?.kind === 'document';
   const excluded = selected ? descendants(selected.id) : new Set();
   modifyParent.replaceChildren(new Option('Main', ''));
-  nodes.filter(node => !node.url && !excluded.has(node.id)).forEach(node => {
+  nodes.filter(node => !node.url && node.kind !== 'task' && !excluded.has(node.id)).forEach(node => {
     modifyParent.add(new Option(screenName(node), node.id));
   });
-  modifyParent.value = selected?.parent_id || (selected ? '' : currentMenu()?.id || '');
+  modifyParent.value = selected?.parent_id || (selected ? '' : taskScreen()?.id || currentMenu()?.id || '');
   modifyParent.closest('label').hidden = !selected;
   document.querySelector('#modify-save').textContent = selected ? 'Save' : 'Add';
   document.querySelector('#modify-delete').disabled = !selected;
@@ -165,8 +202,9 @@ document.querySelector('#modify').addEventListener('click', async () => {
   await syncMenus();
   if (!loaded) return;
   modifyItem.replaceChildren(new Option('Add a new item', ''));
-  const current = currentMenu()?.id || null;
-  [...nodes.filter(n => n.parent_id === current), ...nodes.filter(n => n.parent_id !== current)].forEach(node => {
+  const current = taskScreen()?.id || currentMenu()?.id || null;
+  const choices = taskScreen() ? nodes.filter(n => n.parent_id === current && n.kind === 'task') : [...nodes.filter(n => n.parent_id === current), ...nodes.filter(n => n.parent_id !== current)];
+  choices.forEach(node => {
     modifyItem.add(new Option(screenName(node), node.id));
   });
   populateModify();
@@ -199,15 +237,16 @@ modifyForm.addEventListener('submit', event => {
   event.preventDefault();
   const selected = nodes.find(node => node.id === modifyItem.value);
   const label = modifyLabel.value.trim();
-  const url = modifyURL.value.trim();
-  const parent_id = selected ? modifyParent.value || null : currentMenu()?.id || null;
+  const isTask = selected ? selected.kind === 'task' : Boolean(taskScreen());
+  const url = isTask ? '' : modifyURL.value.trim();
+  const parent_id = selected ? modifyParent.value || null : taskScreen()?.id || currentMenu()?.id || null;
   if (!label) { modifyStatus.textContent = 'Enter a name.'; return; }
   if (url && !/^https?:\/\//i.test(url)) { modifyStatus.textContent = 'Use an http:// or https:// URL.'; return; }
   if (selected && descendants(selected.id).has(parent_id)) { modifyStatus.textContent = 'An item cannot be placed inside itself.'; return; }
   if (url && selected && nodes.some(node => node.parent_id === selected.id)) {
     modifyStatus.textContent = 'Move or delete the items inside this screen before giving it a URL.'; return;
   }
-  const row = { label, url: url || null, parent_id, kind: selected?.kind === 'document' ? 'document' : url ? 'item' : 'menu' };
+  const row = { label, url: url || null, parent_id, kind: isTask ? 'task' : selected?.kind === 'document' ? 'document' : url ? 'item' : 'menu' };
   if (!selected) {
     row.id = crypto.randomUUID();
     row.sort_order = Math.max(-1, ...nodes.filter(n => n.parent_id === parent_id).map(n => n.sort_order || 0)) + 1;

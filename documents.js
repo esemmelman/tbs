@@ -261,6 +261,8 @@ function createStudentDocuments(request) {
   });
   return {
     open(node, student) {
+      document.querySelector('#document-title').textContent = node.kind === 'task' ? node.label : student + ' — Doc';
+      editor.setAttribute('aria-label', node.kind === 'task' ? node.label + ' details' : student + ' document');
       if (active?.id === node.id) return;
       this.close();
       let session = sessions.get(node.id);
@@ -269,8 +271,6 @@ function createStudentDocuments(request) {
       selection = null;
       composing = false;
       screen.hidden = false;
-      document.querySelector('#document-title').textContent = student + ' — Doc';
-      editor.setAttribute('aria-label', student + ' document');
       editor.innerHTML = session.loaded ? session.html : '';
       showState(session);
       void load(session);

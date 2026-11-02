@@ -25,7 +25,10 @@ async function client(t, db) {
     let rows;
     if (path.pathname.endsWith('tbs_menu_nodes_v1')) {
       const id = path.searchParams.get('id')?.slice(3);
-      if (options.method === 'POST') { const row = JSON.parse(options.body); db.nodes.push(row); rows = [row]; }
+      if (options.method === 'POST') {
+        const row = JSON.parse(options.body); db.nodes.push(row); rows = [row];
+        if (row.kind === 'task') db.documents.set(row.id, { node_id: row.id, content_html: '', revision: 0 });
+      }
       else if (options.method === 'PATCH') { rows = db.nodes.filter(n => n.id === id); rows.forEach(n => Object.assign(n, JSON.parse(options.body))); }
       else if (options.method === 'DELETE') { rows = db.nodes.filter(n => n.id === id); db.nodes = db.nodes.filter(n => n.id !== id); }
       else rows = db.nodes;
@@ -195,4 +198,49 @@ test('each screen sorts names alphabetically regardless of database order', asyn
   assert.deepEqual(c.labels(), ['alpha', 'Contacts', 'Zebra', 'Zoom']);
   c.w.navigate('#zoom');
   assert.deepEqual(c.labels(), ['Aaron', 'Emelia Esterkin', 'Sasha Esterkin']);
+});
+
+test('Tasks supports numbered names, completion, rich text, rename, and delete across clients', async t => {
+  const db = database();
+  db.nodes.push({ id: 'tasks', parent_id: null, label: 'Tasks', kind: 'menu' });
+  const a = await client(t, db), b = await client(t, db);
+  a.w.navigate('#tasks');
+  async function add(name) {
+    a.get('#modify').click(); await settle();
+    assert.equal(a.get('#modify-url').closest('label').hidden, true);
+    a.get('#modify-label').value = name;
+    a.get('#modify-form').dispatchEvent(new a.w.Event('submit', { cancelable: true })); await settle();
+  }
+  await add('Write report'); await add('Call teacher');
+  assert.deepEqual(a.labels(), ['1. Call teacher', '2. Write report']);
+  const task = db.nodes.find(n => n.label === 'Call teacher');
+  assert.equal(task.kind, 'task'); assert.equal(task.parent_id, 'tasks');
+  const checkbox = a.get('.task-row input');
+  checkbox.checked = true; checkbox.dispatchEvent(new a.w.Event('change')); await settle();
+  assert.equal(task.completed, true); assert.equal(a.get('.task-row').classList.contains('completed'), true);
+  await b.w.syncAll(); b.w.navigate('#tasks');
+  assert.equal(b.get('.task-row input').checked, true);
+  a.get('.task-name').click(); await settle();
+  assert.equal(a.get('#document-screen').hidden, false);
+  assert.equal(a.get('#document-title').textContent, 'Call teacher');
+  a.edit('<b>Discuss progress</b><ul><li>Schedule next lesson</li></ul>'); await a.save();
+  assert.match(db.documents.get(task.id).content_html, /Discuss progress/);
+  b.get('.task-name').click(); await settle();
+  assert.equal(b.get('#document-editor').innerHTML, db.documents.get(task.id).content_html);
+  assert.equal(b.get('#document-status').textContent, '');
+  a.get('#modify').click(); await settle();
+  a.get('#modify-item').value = task.id; a.get('#modify-item').dispatchEvent(new a.w.Event('change'));
+  a.get('#modify-label').value = 'Ask teacher';
+  a.get('#modify-form').dispatchEvent(new a.w.Event('submit', { cancelable: true })); await settle();
+  assert.equal(task.label, 'Ask teacher'); assert.equal(task.completed, true);
+  a.w.navigate('#tasks');
+  db.offline = true;
+  a.get('.task-row input').checked = false; a.get('.task-row input').dispatchEvent(new a.w.Event('change')); await settle();
+  assert.equal(task.completed, true); assert.equal(a.get('.task-row input').checked, true);
+  db.offline = false;
+  a.get('.task-row input').checked = false; a.get('.task-row input').dispatchEvent(new a.w.Event('change')); await settle();
+  assert.equal(task.completed, false); assert.equal(a.get('.task-row').classList.contains('completed'), false);
+  a.get('#modify').click(); await settle(); a.get('#modify-item').value = task.id;
+  a.get('#modify-item').dispatchEvent(new a.w.Event('change')); a.get('#modify-delete').click(); await settle();
+  assert.deepEqual(a.labels(), ['1. Write report']);
 });

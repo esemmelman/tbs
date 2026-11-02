@@ -17,3 +17,5 @@ No runtime dependencies or build step. Serve this directory with any static web 
 Published at https://esemmelman.github.io/tbs/.
 
 The current revision is displayed at the top-left of every menu. When publishing changes, increment the revision in `index.html` and use the same number in both asset query strings to refresh cached CSS and JavaScript.
+
+Screens named Tasks display alphabetical, sequentially numbered tasks. Use Modify to add, rename, move, or delete tasks. Checkboxes toggle completion and strikethrough without opening the task. Click a task name to open its autosaving rich text details with the existing formatting, draft recovery, and conflict handling. New tasks automatically get a document row through a scoped SECURITY INVOKER trigger. The completed column, task type, trigger, and permissions are recorded in database/tasks.sql. No sign-in is required, matching the app's shared editing model.
