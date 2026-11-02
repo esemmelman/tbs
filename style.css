@@ -7,12 +7,12 @@ body { min-height: 100svh; margin: 0; padding: 40px 18px 24px; display: flex; ju
 .controls button:hover:enabled { background: #f5f6f3; }
 .controls button:disabled { opacity: .45; cursor: default; }
 nav { display: grid; gap: 0; }
-.item { width: 100%; display: block; padding: 4px 8px; line-height: 1.2; text-decoration: none; color: inherit; font: inherit; text-align: center; font-size: 26px; font-weight: 600; border: 0; background: transparent; cursor: pointer; }
+.item { width: 100%; display: block; padding: 4px 8px; line-height: 1.2; text-decoration: none; color: inherit; font: inherit; text-align: center; font-size: 22px; font-weight: 600; border: 0; background: transparent; cursor: pointer; }
 .item:hover { background: #f5f6f3; }
 .item:focus-visible, .controls button:focus-visible { outline: 2px solid #78977a; outline-offset: 2px; }
-.label { min-width: 0; font-size: 26px; font-weight: 600; overflow-wrap: anywhere; }
+.label { min-width: 0; font-size: 22px; font-weight: 600; overflow-wrap: anywhere; }
 
-.revision { position: absolute; top: 0; left: 0; padding: 2px; font-size: 10px; line-height: 1.2; font-weight: 400; color: #777; }
+.revision { position: absolute; top: 0; left: 0; padding: 2px; font-size: 16px; line-height: 1.2; font-weight: 400; color: #777; }
 
 .status { font-size: 13px; line-height: 1.4; color: #777; margin: 12px 0 0; }
 .status:empty { display: none; }
